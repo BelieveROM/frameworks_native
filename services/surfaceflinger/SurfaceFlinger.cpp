@@ -102,7 +102,8 @@ SurfaceFlinger::SurfaceFlinger()
         mLastSwapBufferTime(0),
         mDebugInTransaction(0),
         mLastTransactionTime(0),
-        mBootFinished(false)
+        mBootFinished(false),
+        mUseDithering(0)
 {
     ALOGI("SurfaceFlinger is starting");
 
@@ -123,6 +124,7 @@ SurfaceFlinger::SurfaceFlinger()
             mDebugDDMS = 0;
         }
     }
+
     ALOGI_IF(mDebugRegion, "showupdates enabled");
     ALOGI_IF(mDebugDDMS, "DDMS debugging enabled");
 }
@@ -469,6 +471,8 @@ void SurfaceFlinger::initializeGL(EGLDisplay display) {
     ALOGI("extensions: %s", extensions.getExtension());
     ALOGI("GL_MAX_TEXTURE_SIZE = %d", mMaxTextureSize);
     ALOGI("GL_MAX_VIEWPORT_DIMS = %d x %d", mMaxViewportDims[0], mMaxViewportDims[1]);
+
+    mMinColorDepth = r;
 }
 
 status_t SurfaceFlinger::readyToRun()
@@ -521,6 +525,11 @@ status_t SurfaceFlinger::readyToRun()
                 hw->acquireScreen();
             }
             mDisplays.add(token, hw);
+            PixelFormatInfo info;
+            getPixelFormatInfo(mHwc->getFormat(i), &info);
+            if (!mUseDithering && info.bitsPerPixel <= 16) {
+                mUseDithering = 1;
+            }
         }
     }
 
@@ -568,6 +577,10 @@ void SurfaceFlinger::startBootAnim() {
 
 uint32_t SurfaceFlinger::getMaxTextureSize() const {
     return mMaxTextureSize;
+}
+
+uint32_t SurfaceFlinger::getMinColorDepth() const {
+    return mMinColorDepth;
 }
 
 uint32_t SurfaceFlinger::getMaxViewportDims() const {

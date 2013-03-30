@@ -64,6 +64,7 @@ Layer::Layer(SurfaceFlinger* flinger, const sp<Client>& client,
         mFormat(PIXEL_FORMAT_NONE),
         mGLExtensions(GLExtensions::getInstance()),
         mOpaqueLayer(true),
+        mNeedsDithering(false),
         mTransactionFlags(0),
         mQueuedFrames(0),
         mCurrentTransform(0),
@@ -199,6 +200,14 @@ status_t Layer::setBuffers( uint32_t w, uint32_t h,
     mSurfaceFlingerConsumer->setDefaultBufferSize(w, h);
     mSurfaceFlingerConsumer->setDefaultBufferFormat(format);
     mSurfaceFlingerConsumer->setConsumerUsageBits(getEffectiveUsage(0));
+
+    if (mFlinger->getUseDithering()) {
+        int displayMinColorDepth = mFlinger->getMinColorDepth();
+        // we use the red index
+        int layerRedsize = info.getSize(PixelFormatInfo::INDEX_RED);
+
+        mNeedsDithering = (layerRedsize > displayMinColorDepth);
+    }
 
     return NO_ERROR;
 }
@@ -531,6 +540,7 @@ void Layer::clearWithOpenGL(const sp<const DisplayDevice>& hw, const Region& cli
     glDisable(GL_TEXTURE_EXTERNAL_OES);
     glDisable(GL_TEXTURE_2D);
     glDisable(GL_BLEND);
+    glDisable(GL_DITHER);
 
     LayerMesh mesh;
     computeGeometry(hw, &mesh);
@@ -615,6 +625,12 @@ void Layer::drawWithOpenGL(
     texCoords[3].v = top;
     for (int i = 0; i < 4; i++) {
         texCoords[i].v = 1.0f - texCoords[i].v;
+    }
+
+    if (needsDithering()) {
+        glEnable(GL_DITHER);
+    } else {
+        glDisable(GL_DITHER);
     }
 
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
