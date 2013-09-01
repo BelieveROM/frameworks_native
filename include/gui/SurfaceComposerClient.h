@@ -74,7 +74,7 @@ public:
     /* triggers screen on and waits for it to complete */
     static void unblankDisplay(const sp<IBinder>& display);
 
-#if defined(TOROPLUS_RADIO)
+#ifdef TARGET_TOROPLUS_RADIO_FIX
     static status_t getDisplayInfo(int32_t displayId, DisplayInfo* info);
 #endif
     
@@ -177,8 +177,15 @@ public:
     ScreenshotClient();
     ~ScreenshotClient();
 
+#ifdef TARGET_TOROPLUS_RADIO_FIX
+    // TODO: Remove me.  Do not use.
+    // This is a compatibility shim for one product whose drivers are depending on
+    // this legacy function (when they shouldn't).
+    status_t update();
+#endif
+
+
     // frees the previous screenshot and capture a new one
-    status_t update(); // needed for old Sprint ril
     status_t update(const sp<IBinder>& display);
     status_t update(const sp<IBinder>& display,
             uint32_t reqWidth, uint32_t reqHeight);
